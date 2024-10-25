@@ -11,18 +11,12 @@ df3 = pd.read_csv('/Users/smin/Desktop/dataen/csv/status.csv')
 #독립변수와 종속변수를 한 데이터프레임으로 병합
 df_merge = df.merge(df2, on='timestamp').merge(df3, on='timestamp')
 
-df_merge['timestamp'] = pd.to_datetime(df_merge['timestamp'], unit='s', utc=True)
-df_merge['date'] = df_merge['timestamp'].dt.tz_convert('Asia/Seoul').dt.strftime('%Y-%m-%d %H:%M')
-df_merge = df_merge[df_merge['date'] >= '2024-06-02']
-
-df_merge['date'] = pd.to_datetime(df_merge['date'])
-df_merge.set_index('date', inplace=True)
-df_merge = df_merge.asfreq('h')
+#6월 2일 전의 데이터는 포함 X
+index = int(df_merge[df_merge['timestamp'] == 1717340400].index[0])
 
 train_size = int(len(df_merge) * 0.8)
-train = df_merge.iloc[:train_size]
+train = df_merge.iloc[index:train_size]
 test = df_merge.iloc[train_size:]
-
 
 x_train, x_test = train[['price_fir', 'currentDemand', 'supplyReserveCapacity']], test[['price_fir', 'currentDemand', 'supplyReserveCapacity']]
 y_train, y_test = train['price'], test['price']
