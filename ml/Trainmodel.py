@@ -2,6 +2,7 @@ import pickle
 
 import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.preprocessing import StandardScaler
 
 #종속변수의 csv
 df = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')
@@ -10,14 +11,18 @@ df2 = pd.read_csv('/Users/smin/Desktop/dataen/csv/real_time.csv')
 df3 = pd.read_csv('/Users/smin/Desktop/dataen/csv/status.csv')
 #독립변수와 종속변수를 한 데이터프레임으로 병합
 df_merge = df.merge(df2, on='timestamp').merge(df3, on='timestamp')
+df_final = df_merge[['timestamp', 'date', 'price', 'price_fir', 'currentDemand', 'supplyReserveCapacity']]
 
+scaler = StandardScaler()
+df_final.loc[:, ['currentDemand', 'supplyReserveCapacity']] = scaler.fit_transform(df_final[['currentDemand', 'supplyReserveCapacity']])
 #6월 2일 전의 데이터는 포함 X
-index = int(df_merge[df_merge['timestamp'] == 1717340400].index[0])
 
-train_size = int(len(df_merge) * 0.8)
-train = df_merge.iloc[index:train_size]
-test = df_merge.iloc[train_size:]
+index = int(df_final[df_final['timestamp'] == 1717340400].index[0])
 
+train_size = int(len(df_final) * 0.8)
+train = df_final.iloc[index:train_size]
+test = df_final.iloc[train_size:]
+print(train.columns)
 x_train, x_test = train[['price_fir', 'currentDemand', 'supplyReserveCapacity']], test[['price_fir', 'currentDemand', 'supplyReserveCapacity']]
 y_train, y_test = train['price'], test['price']
 
