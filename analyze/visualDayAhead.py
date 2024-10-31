@@ -1,24 +1,22 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import dataPreProcessing.tstodate as ttd
-
-
+import matplotlib.ticker as ticker
 
 #라인 그래프
 def lineplot_():
-    df = pd.read_csv('/csv/day_ahead.csv')
+    df = pd.read_csv(r'C:\dataen\csv\day_ahead.csv')
     plt.figure(figsize=(20, 10))
+    df['dates'] = pd.to_datetime(df['timestamp'], unit='s', utc=True)
+    df['dates'] = df['dates'].dt.tz_convert('Asia/Seoul').dt.strftime('%m-%d')
+    sns.lineplot(x='dates', y='price', data=df, color='skyblue')
 
-    sns.lineplot(x='date', y='price', data=df, color='skyblue')
-
-    # 그래프 제목 및 라벨 설정
     plt.title("Day-Ahead SMP")
     plt.xlabel("TIME")
-    plt.xticks(ticks=range(0, len(df['date']), 250), rotation=0)  # 10개 간격으로 표시
+    plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(6))  # 5 단위 간격 설정
     plt.ylabel("SMP")
-    plt.grid(True)
-    plt.tight_layout()  # 레이    아웃 자동 조정
+    #plt.grid(True)
+    plt.tight_layout()
     plt.show()
 
 lineplot_()

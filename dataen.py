@@ -74,6 +74,8 @@ class Api(Route):
         result = {'submit_result' : result}
         print(requests.post(self.POST, data=json.dumps(result), headers={'Authorization': f'Bearer {self.API_KEY}'}).json())
 
+
+
 class PreProcessor(Route):
     def __init__(self):
         super().__init__()
@@ -101,11 +103,9 @@ class PreProcessor(Route):
         #print(self.data[['price_fir_lag1', 'currentDemand_lag1', 'supplyReserveCapacity_lag1']].head())
         self.y = self.data['price']  # 종속 변수
         self.x = self.data[['price_fir_lag1', 'currentDemand_lag1', 'supplyReserveCapacity_lag1']]  # 독립 변수
-        #print(self.x.head)
-        #print(df_final[['price', 'date', 'price_lag1', 'date_lag1']].tail(24))
-        # print(df_final[['price_fir', 'date','price_fir_lag1', 'date_lag1']].tail(24))
-        # print(df_final[['supplyReserveCapacity', 'date','supplyReserveCapacity_lag1', 'date_lag1']].tail(24))
-        # print(df_final[['currentDemand', 'date','currentDemand_lag1', 'date_lag1']].tail(24))
+
+    def check_lateday(self):
+        print("훈련에 사용될 DataFrame의 마지막 Date:" , self.data['date'].tail(1).values[0])
 
 class SarimaxModel(PreProcessor):
     def __init__(self):
@@ -176,3 +176,4 @@ class SarimaxModel(PreProcessor):
         e_F = 0.2 * e1 + 0.8 * e2 - (Accuracy - 0.95)
 
         return e_F
+

@@ -2,9 +2,9 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-df1 = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')
-df2 = pd.read_csv('/Users/smin/Desktop/dataen/csv/status.csv')
-df3 = pd.read_csv('/Users/smin/Desktop/dataen/csv/real_time.csv')
+df1 = pd.read_csv(r'C:\dataen\csv\day_ahead.csv')
+df2 = pd.read_csv(r'C:\dataen\csv\status.csv')
+df3 = pd.read_csv(r'C:\dataen\csv\real_time.csv')
 
 
 #하루전 전기가격과 Real-Time간의 상관관계
@@ -21,7 +21,7 @@ def aheadToRealTime() :
 def aheadToStatus() :
     merged_df = pd.merge(df1, df2, on='timestamp')
 
-    selected_columns = ['price', 'supplyCapacity','currentDemand','solarGeneration', 'windGeneration', 'totalRenewableGeneration', 'supplyReserveCapacity']  # 실제 열 이름으로 변경
+    selected_columns = ['price', 'currentDemand', 'totalRenewableGeneration', 'supplyReserveCapacity']
 
     corr_matrix = merged_df[selected_columns].corr()
 
@@ -30,4 +30,4 @@ def aheadToStatus() :
     plt.title('Correlation Matrix')
     plt.tight_layout()
     plt.show()
-aheadToStatus()
+aheadToRealTime()
