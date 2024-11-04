@@ -14,9 +14,9 @@
 ###
 import model
 sarimax = model.sarimax()
-sarimax.test()
-#s_model = sarimax.train()
-#print(sarimax.forecast())
+#sarimax.test()
+s_model = sarimax.train()
+print(s_model.forecast())
 
 
 

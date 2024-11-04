@@ -85,10 +85,13 @@ class preprocessor(process, Route):
         else:
             self.data = pd.read_csv(self.RESULTPATH)
             self.addApiData()
+            self.data = self.data[self.data['timestamp'] >= 1717513200]
+            self.data =self.data.reset_index(drop=True)
             self.y = self.data['price']  # 종속 변수
             self.x = self.data[
                 ['price_fir_lag1', 'currentDemand_lag1', 'supplyReserveCapacity_lag1', 'totalRenewableGeneration_lag1',
                  'supplyCapacity_lag1']]  # 독립 변수
+
 
     def addApiData(self):
         end_date = datetime.strptime("2024-11-03", "%Y-%m-%d")
