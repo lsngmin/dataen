@@ -1,8 +1,29 @@
 import numpy as np
+import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAX, SARIMAXResults
+from sklearn.preprocessing import PowerTransformer
 
 from preprocessing import preprocessor
 
+class sub_sarima(preprocessor):
+    def __init__(self):
+        super().__init__()
+        self.model = None
+        self.model_fit = None
+    def train(self):
+        p, d, q = 1, 1, 2
+        P, D, Q, m = 1, 1, 2, 24
+        self.model = SARIMAX(self.y, order=(p, d, q), seasonal_order=(P, D, Q, m))
+        self.model_fit = self.model.fit(disp=True,
+                                        maxiter=500,
+                                        method='powell',
+                                        cov_type='oim',  # 공분산 계산 방법 변경
+                                        optim_hessian='approx',  # 헤시안 계산 방식 변경
+                                        optim_score='harvey'
+                                        )
+        self.model_fit.save(self.MODELSAVEPATH)
+        print(self.model_fit.summary())
+        return self
 
 class sarimax(preprocessor):
     def __init__(self):
@@ -14,8 +35,15 @@ class sarimax(preprocessor):
         p, d, q = 1, 1, 2
         P, D, Q, m = 1, 1, 2, 24
         print(f'SETTING VALUE\n NON SEASONAL(p {p}, d {d}, q {q})\n SEASONAL(P {P}, D {D}, Q {Q}, m {m})')
+        #y = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')['price']
         self.model = SARIMAX(self.y, order=(p, d, q), seasonal_order=(P, D, Q, m), exog=self.x)
-        self.model_fit = self.model.fit(disp=True, maxiter=10)
+        self.model_fit = self.model.fit(disp=True,
+                                        maxiter=100,
+                                        method='Powell'
+                                        # cov_type='oim',  # 공분산 계산 방법 변경
+                                        # optim_hessian='approx',  # 헤시안 계산 방식 변경
+                                        # optim_score='harvey'
+                                        )
         self.model_fit.save(self.MODELSAVEPATH)
         print(self.model_fit.summary())
         return self
@@ -24,10 +52,16 @@ class sarimax(preprocessor):
         if self.model_fit is None:
             print("저장된 모델을 사용합니다.")
             self.model_fit = SARIMAXResults.load(self.MODELSAVEPATH)
-        exog = self.data[['price_fir', 'currentDemand', 'supplyReserveCapacity', 'totalRenewableGeneration',
-                          'supplyCapacity']].iloc[-24:]
-        forecast = self.model_fit.forecast(steps=24, exog=exog)
+        exog = self.data[
+            ['supplyPower','presentLoad','powerSolar','powerWind','supplyCapacity',
+             'reserve_ratio', 'demand_renewable_ratio','demand_supply_diff',
+             'reserve_to_demand_ratio']].iloc[-38:]
+        forecast = self.model_fit.forecast(steps=38, exog=exog)
         print('[' + self.data['date'][-24:-23].values[0] + "] ~ [" + self.data['date'][-1:].values[0] + '] 를 이용하여 예측을 수행합니다.' )
+        print(forecast.tolist())
+
+        #result = self.transformer.inverse_transform(np.array(forecast.tolist()).reshape(-1, 1))
+
         return forecast.tolist()
     def test(self):
         data = self.createTestdata()
@@ -39,7 +73,7 @@ class sarimax(preprocessor):
             print('[' + data['date'][i:i+24].values[0] + "] ~ [" + data['date'][i:i+24].values[
                 23] + '] 를 이용하여 예측을 수행합니다.')
             exog = data[['price_fir_lag1', 'currentDemand_lag1', 'supplyReserveCapacity_lag1', 'totalRenewableGeneration_lag1',
-                 'supplyCapacity_lag1']].iloc[i:i + 24]
+                 'supplyCapacity_lag1','renewable_ratio', 'reserve_ratio', 'demand_renewable_ratio', 'demand_supply_diff']].iloc[i:i + 24]
             y = data['price'].iloc[i:i + 24]
             forecast = self.model_fit.forecast(steps=24, exog=exog)
             e1, e2, ef = calculateMeasure(actual=y.tolist(), forecast=forecast.tolist())

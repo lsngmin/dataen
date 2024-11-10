@@ -7,12 +7,9 @@ from route import Route
 class Analyze(Route):
     def __init__(self):
         super().__init__()
-        df = pd.read_csv(self.DAYAHEAD)
+        df = pd.read_csv(self.RESULTPATH)
         index = int(df[df['timestamp'] == 1717340400].index[0])
         self.df = df.iloc[index:]
-        self.ahead = pd.read_csv(self.DAYAHEAD)
-        self.status = pd.read_csv(self.STATUS)
-        self.realtime = pd.read_csv(self.REALTIME)
 
     def anal_acf(self, lags=100):
         plot_acf(self.df['price'], lags=lags)
@@ -31,11 +28,9 @@ class Analyze(Route):
         plt.imsave(self.IMAGESAVEPATH + 'decompose.png')
 
     def anal_corr_matrix_status(self):
-        merged_df = pd.merge(self.ahead, self.status, on='timestamp')
+        columns = ['price', 'price_fir_lag1', 'currentDemand_lag1', 'totalRenewableGeneration_lag1', 'supplyReserveCapacity_lag1','supplyCapacity_lag1']
 
-        columns = ['price', 'currentDemand', 'totalRenewableGeneration', 'supplyReserveCapacity','totalRenewableGeneration','supplyCapacity']
-
-        corr_matrix = merged_df[columns].corr()
+        corr_matrix = self.df[columns].corr()
 
         plt.figure(figsize=(12, 10))
         sns.heatmap(corr_matrix, annot=True, cmap='coolwarm')
@@ -53,3 +48,6 @@ class Analyze(Route):
         plt.title('Correlation Matrix')
         plt.show()
         plt.imsave(self.IMAGESAVEPATH + 'corr_matrix_rt.png')
+
+anal = Analyze()
+anal.anal_corr_matrix_status()
