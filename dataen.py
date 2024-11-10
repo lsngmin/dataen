@@ -30,8 +30,8 @@ from preprocessing import process, preprocessor
 
 y = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')['price'].iloc[-24:].tolist()
 
-# sarimax = model.sarimax()
-# s_model = sarimax.train()
+sarimax = model.sarimax()
+s_model = sarimax.train()
 # f = s_model.forecast()
 # f = f[14:]
 # Api().post_value(f)
