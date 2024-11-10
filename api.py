@@ -8,13 +8,6 @@ class Api(process, Route):
     def __init__(self):
         super().__init__()
 
-    def fetchData(self, endpoint, columns, new_columns, date):
-        response = requests.get(self.URL + endpoint.format(date=date),
-                                headers={'Authorization': f'Bearer {self.API_KEY}'}).json()
-        df = pd.DataFrame(response)[columns]
-        df.columns = new_columns
-        return df
-
     def fetch_SMPAhead(self, date):
         smp_da = requests.get(f'https://research-api.solarkim.com/data/cmpt-2024/smp-da/{date}', headers={
             'Authorization': f'Bearer {self.API_KEY}'}).json()
