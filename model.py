@@ -55,10 +55,9 @@ class sarimax(preprocessor):
         forecast = self.model_fit.forecast(steps=self.USEINDEX, exog=exog)
 
         print(forecast.tolist())
-        scaler = RobustScaler()
-        result = scaler.inverse_transform(np.array(forecast.tolist()).reshape(-1, 1))
+        result = self.robust.inverse_transform(np.array(forecast.tolist()).reshape(-1, 1)).flatten().tolist()
         print(result)
-        return forecast.tolist()
+        return result
 
     # 사용하지 않음
     def test(self):

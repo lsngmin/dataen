@@ -11,6 +11,7 @@ class process(Route):
     def __init__(self):
         super().__init__()
         self.data = None
+        self.robust = RobustScaler()
 
     def test(self):
         df = pd.read_csv('/Users/smin/Desktop/dataen/csv/status.csv')
@@ -67,8 +68,7 @@ class process(Route):
         columns = ['price']
         print(f'        정규화 대상 컬럼({columns})')
 
-        scaler = RobustScaler()
-        ss[columns] = scaler.fit_transform(ss[columns])
+        ss[columns] = self.robust.fit_transform(ss[columns])
         print('     정규화 수행 완료 ...')
         print(self.data['price'])
         return ss if data is not None else setattr(self, 'data', ss)
@@ -106,17 +106,17 @@ class preprocessor(process, Route):
         self.data.to_csv(self.RESULTPATH)
 
         # #특정 시점 이후부터 학습 ( 6월 초 부터 )
-        start_ts = 1717426800
+        #start_ts = 1717426800
         end_ts = 1731200400
         korea_tz = pytz.timezone('Asia/Seoul')
-        start_date = datetime.fromtimestamp(start_ts, korea_tz)
+        #start_date = datetime.fromtimestamp(start_ts, korea_tz)
         end_date = datetime.fromtimestamp(end_ts, korea_tz)
 
         # 결과 출력
-        print('   데이터의 시작 지점 : ' , start_date.strftime('%Y-%m-%d %H:%M:%S'))
+        #print('   데이터의 시작 지점 : ' , start_date.strftime('%Y-%m-%d %H:%M:%S'))
         print('   데이터의 종료 지점 : ' , end_date.strftime('%Y-%m-%d %H:%M:%S'))
 
-        self.data = self.data[self.data['timestamp'] >= start_ts]#3월 4일부터17174268001709478000
+        #self.data = self.data[self.data['timestamp'] >= start_ts]#3월 4일부터17174268001709478000
         self.data = self.data[self.data['timestamp'] <= end_ts]#11월 9일 10시까지 1731200400
 
         self.data = self.data.reset_index(drop=True)
