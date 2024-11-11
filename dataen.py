@@ -17,42 +17,29 @@ from matplotlib import pyplot as plt
 
 import model
 
-from preprocessing import Api, preprocessor
+from preprocessing import preprocessor, process
+from api import api
 
-#api = Api()
-#api.test()
-#pro = preprocessor()
-# api.post_value(rsttt)
-from preprocessing import process, preprocessor
-#process().defaultToStatus()
-#y = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv').iloc[-24:]
-# print(y)
 
-y = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')['price'].iloc[-24:].tolist()
+y = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')['price'].iloc[-48:-24].tolist()
 
 sarimax = model.sarimax()
 s_model = sarimax.train()
-# f = s_model.forecast()
-# f = f[14:]
-# Api().post_value(f)
-# print(f)
-# print(len(f))
-# e1, e2, ef = model.calculateMeasure(actual=y, forecast=f)
-# print(e1, ' : ', e2, ' : ', ef)
-#
+f = sarimax.forecast()
 
-t = [102.65168918603956, 99.90819943493466, 94.56219279813777, 93.114435423719, 99.1883982588775, 97.95443831277808, 112.96335219061497, 116.95697099350784, 125.80998143712984, 118.03878280630448, 109.4508521158748, 98.00051975944464, 79.86304397598363, 79.30389579792305, 79.42915259377207, 76.62059477915982, 73.731352439792, 72.90271188771499, 77.62907834398135, 83.11875055166057, 87.4845156816136, 86.84582325152994, 99.63305755933483, 100.690624968466]
+s = [102.24994065925588, 90.04058953541953, 84.82149763264722, 76.5707096909058, 75.27804770379657, 83.60830965786315, 108.14889936624442, 106.83411135477097, 114.74679151815646, 104.85131714780036, 98.76272375614664, 85.43870754981876, 73.70471761953857, 78.95061197884054, 98.41607947322468, 116.11585539566248, 128.69659287656435, 133.37118332899757, 129.42921161884468, 128.17659046058753, 124.76689422566689, 113.46291776377697, 115.6274593026227, 109.77731908647074]
 
+# shift
+e1, e2, ef = model.calculateMeasure(actual=y, forecast=f)
+print(e1, ' : ', e2, ' : ', ef)
 
-r = [92.32813810999718, 74.74018501893255, 72.48330592346349, 68.59191566493573, 64.517366716193, 69.23472894454335, 87.22720453361269, 92.12165911661954, 100.74818019631635, 92.73596393472312, 87.94022687197707, 72.16148583348595, 51.19335533337831, 59.416350155479705, 71.64862445070088, 81.65027964979859, 95.51966736472968, 95.28755489179069, 90.30389715304634, 92.56367705985959, 91.28107873602578, 82.15997111930244, 86.68011804039375
- , 86.05320191215479]
 plt.figure()
 
 # list1: 점선 스타일로 그리기
-plt.plot(t, linestyle=':', label='forecast')
+plt.plot(f, linestyle=':', label='forecast')
 
 # list2: 실선 스타일로 그리기
-plt.plot(r, linestyle='-', label='actual')
+plt.plot(y, linestyle='-', label='actual')
 
 # 그래프 제목 및 레이블 설정
 plt.title('Graph with Dotted and Solid Lines')
@@ -64,3 +51,11 @@ plt.legend()
 
 # 그래프 표시
 plt.show()
+
+
+# ff = sarimax.get_forecast()
+
+
+
+## 불확실성 테스트
+

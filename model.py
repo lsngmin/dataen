@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from statsmodels.tsa.statespace.sarimax import SARIMAX, SARIMAXResults
 from sklearn.preprocessing import PowerTransformer, RobustScaler
 
@@ -13,18 +14,16 @@ class sarimax(preprocessor):
         self.model_fit = None
 
         #모델 파라미터
-        self.paramNONSSN = 1, 1, 2  # p, d, q
-        self.paramSSN = 1, 1, 2, 24  # P, D, Q, m
-        self.method = 'powell'
-        self.maxiter = 100
+        self.paramNONSSN = 1, 1, 1  # p, d, q
+        self.paramSSN = 1, 1, 1, 24  # P, D, Q, m
+        self.method = 'lbfgs'
+        self.maxiter = 200
         # 사용할 외생변수
-        self.USEEXOG = ['supplyPower', 'presentLoad', 'powerSolar', 'powerWind', 'supplyCapacity',
-                        'reserve_ratio', 'demand_renewable_ratio', 'demand_supply_diff',
-                        'reserve_to_demand_ratio']
-
+        self.USEEXOG = ['presentLoad',  'supplyCapacity', 'price_fir', 'powerSolar', 'powerWind']
+#'reserve_ratio', 'demand_renewable_ratio', 'demand_supply_diff', 'reserve_to_demand_ratio','presentLoad', 'powerSolar', 'powerWind',
         # 훈련에 사용된 마지막 일자부터 예측할 24시간 동안의 INDEX
         # EX) 11월 10일 10시 까지의 데이터를 학습시켰다면 11월 10일 11시부터 (11월 11일 1시 ~ 11월 12일 00시)까지의 데이터를 예측 해야 하므로  14+24=38
-        self.USEINDEX = 38
+        self.USEINDEX = 24
 
     def train(self):
         # 모델 파라미터 설정
@@ -38,8 +37,8 @@ class sarimax(preprocessor):
 
         self.model = SARIMAX(self.y, order=(p, d, q), seasonal_order=(P, D, Q, m), exog=self.x)
         self.model_fit = self.model.fit(disp=True,
-                                        maxiter=self.maxiter,
-                                        method=self.method
+                                        maxiter=self.maxiter
+                                        #method=self.method
 
                                         )
         self.model_fit.save(self.MODELSAVEPATH)
@@ -51,13 +50,74 @@ class sarimax(preprocessor):
             print("저장된 모델을 사용합니다.")
             self.model_fit = SARIMAXResults.load(self.MODELSAVEPATH)
 
-        exog = self.data[self.USEEXOG].iloc[-self.USEINDEX:]
+        exog = self.data[self.USEEXOG].iloc[-24:]
         forecast = self.model_fit.forecast(steps=self.USEINDEX, exog=exog)
 
         print(forecast.tolist())
         result = self.robust.inverse_transform(np.array(forecast.tolist()).reshape(-1, 1)).flatten().tolist()
         print(result)
         return result
+    def get_forecast(self):
+        #### 불확실성 테스트 ###
+        if self.model_fit is None:
+            print("저장된 모델을 사용합니다.")
+            self.model_fit = SARIMAXResults.load(self.MODELSAVEPATH)
+
+        exog = self.data[self.USEEXOG].iloc[-self.USEINDEX:]
+        forecast_result = self.model_fit.get_forecast(steps=self.USEINDEX, exog=exog)
+
+        forecast_mean = forecast_result.predicted_mean  # 예측 평균값
+        forecast_conf_int = forecast_result.conf_int(alpha=0.90)  # 예측 구간 (신뢰 구간)
+        forecast_mean_original = self.robust.inverse_transform(np.array(forecast_mean).reshape(-1, 1)).flatten()
+
+        # 신뢰 구간을 정규화 해제
+        conf_int_lower = self.robust.inverse_transform(np.array(forecast_conf_int.iloc[:, 0]).reshape(-1, 1)).flatten()
+        conf_int_upper = self.robust.inverse_transform(np.array(forecast_conf_int.iloc[:, 1]).reshape(-1, 1)).flatten()
+        forecast_conf_int_original = pd.DataFrame({'lower': conf_int_lower, 'upper': conf_int_upper},
+                                                  index=forecast_conf_int.index)
+
+        # 결과 출력
+        print("정규화 해제된 예측 평균값:")
+        print(forecast_mean_original)
+        y = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')['price'].iloc[-24:].tolist()
+
+        plt.figure()
+
+        # list1: 점선 스타일로 그리기
+        plt.plot(forecast_mean_original, linestyle=':', label='forecast')
+
+        # list2: 실선 스타일로 그리기
+        plt.plot(y, linestyle='-', label='actual')
+
+        # 그래프 제목 및 레이블 설정
+        plt.title('Graph with Dotted and Solid Lines')
+        plt.xlabel('steps')
+        plt.ylabel('price')
+
+        # 범례 추가
+        plt.legend()
+
+        # 그래프 표시
+        plt.show()
+        print("\n정규화 해제된 예측 구간 (신뢰 구간):")
+        print(forecast_conf_int_original)
+
+        y = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv').iloc[-38:]
+
+        plt.plot(y['timestamp'], y['price'], label='Actual')
+        plt.plot(forecast_mean.index, forecast_mean_original, label='Forecast', color='blue')
+
+        # 예측 구간 시각화
+        plt.fill_between(forecast_mean.index,
+                         forecast_conf_int_original.iloc[:, 0],  # 하한값
+                         forecast_conf_int_original.iloc[:, 1],  # 상한값
+                         color='blue', alpha=0.2)
+
+        plt.xlabel('Timestamp')
+        plt.ylabel('Price')
+        plt.title('Forecast with Prediction Interval')
+        plt.legend()
+        plt.show()
 
     # 사용하지 않음
     def test(self):

@@ -1,9 +1,9 @@
 import pandas as pd, requests, json
 
-from preprocessing import process
 from route import Route
 
-class Api(process, Route):
+
+class api(Route):
     def __init__(self):
         super().__init__()
 
@@ -17,6 +17,11 @@ class Api(process, Route):
             'Authorization': f'Bearer {self.API_KEY}'}).json()
         return pd.DataFrame(elec_supply)
 
+    def fetch_real(self, date):
+        smp_rt_rc = requests.get(f'https://research-api.solarkim.com/data/cmpt-2024/smp-rt-rc/{date}', headers={
+            'Authorization': f'Bearer {self.API_KEY}'
+        }).json()
+        return pd.DataFrame(smp_rt_rc)
 
     def post_value(self, result):
         result = {'submit_result': result}
