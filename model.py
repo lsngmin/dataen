@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAX, SARIMAXResults
-from sklearn.preprocessing import PowerTransformer
+from sklearn.preprocessing import PowerTransformer, RobustScaler
 
 from preprocessing import preprocessor
 
@@ -55,7 +55,9 @@ class sarimax(preprocessor):
         forecast = self.model_fit.forecast(steps=self.USEINDEX, exog=exog)
 
         print(forecast.tolist())
-
+        scaler = RobustScaler()
+        result = scaler.inverse_transform(np.array(forecast.tolist()).reshape(-1, 1))
+        print(result)
         return forecast.tolist()
 
     # 사용하지 않음

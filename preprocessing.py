@@ -1,11 +1,11 @@
 import numpy as np
-import pandas as pd, os, requests, json
-from sklearn.preprocessing import StandardScaler
+import pandas as pd, os, requests, json, pytz
+from sklearn.preprocessing import StandardScaler, RobustScaler
 from datetime import datetime, timedelta
 
 from route import Route
+from api import api
 from sklearn.preprocessing import PowerTransformer
-
 
 class process(Route):
     def __init__(self):
@@ -19,7 +19,7 @@ class process(Route):
         print(df_hourly)
     def defaultToStatus(self):
         df = pd.read_csv('/Users/smin/Desktop/dataen/csv/status.csv')
-        data = Api().fetch_Status('2024-11-10')
+        data = api().fetch_Status('2024-11-10')
         data.columns = self.STATUSNAME
         tmp_df = data[~data['timestamp'].isin(df['timestamp'])]
         df = pd.concat([df, tmp_df], ignore_index=True)
@@ -28,7 +28,7 @@ class process(Route):
 
     def defaultToSMP(self):
         df = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')
-        data = Api().fetch_SMPAhead('2024-11-09')
+        data = api().fetch_SMPAhead('2024-11-09')
         data.columns = ['timestamp', 'price']
         tmp_df = data[~data['timestamp'].isin(df['timestamp'])]
         df = pd.concat([df, tmp_df], ignore_index=True)
@@ -36,7 +36,7 @@ class process(Route):
         df.to_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv', index=False)
 
     def defaultDataMerge(self):
-        #(self.DEFAULTCSVPATH + '제주전력시장_시장전기가격_실시간가격.csv', ['ts', '실시간 확정 가격(원/kWh)'], ['timestamp', 'price_fir']),
+
         smp = pd.read_csv('/Users/smin/Desktop/dataen/csv/day_ahead.csv')
         status = pd.read_csv('/Users/smin/Desktop/dataen/csv/status.csv')
 
@@ -45,24 +45,46 @@ class process(Route):
         self.data = self.data.drop(columns=['operationCapacity'])
 
         self.data.rename(columns={'date_x': 'date'}, inplace=True)
-
+        print('     데이터 병합 완료 ...')
         self.data['reserve_ratio'] = self.data['supplyCapacity'] / self.data['supplyPower']
         self.data['demand_renewable_ratio'] = self.data['renewableEnergyTotal'] / self.data['presentLoad']
         self.data['demand_supply_diff'] = self.data['supplyPower'] - self.data['presentLoad']
         self.data['reserve_to_demand_ratio'] = self.data['supplyCapacity'] / self.data['presentLoad']
+        print('     파생변수 추가 완료 ...')
+        print(f'        데이터의 컬럼({self.data.columns}) ...')
+
+
         #self.data['demand_to_supply_ratio'] = self.data['presentLoad'] / self.data['supplyPower']
         #self.data['reserve_variability'] = self.data['supplyCapacity'].diff()
+
         self.standardScaler()
+        self.robustScaler()
+
+    def robustScaler(self, data=None):
+        ss = self.data if data is None else data
+        print('     Robust 정규화 수행중 ...')
+        # 정규화할 컬럼을 직접 선택
+        columns = ['price']
+        print(f'        정규화 대상 컬럼({columns})')
+
+        scaler = RobustScaler()
+        ss[columns] = scaler.fit_transform(ss[columns])
+        print('     정규화 수행 완료 ...')
+        print(self.data['price'])
+        return ss if data is not None else setattr(self, 'data', ss)
+
 
     def standardScaler(self, data=None):
         ss = self.data if data is None else data
+        print('     Standard 정규화 수행중 ...')
 
         # 정규화할 컬럼을 직접 선택
+
         normalize_columns = ['supplyPower', 'presentLoad', 'powerSolar', 'powerWind','supplyCapacity']
+        print(f'        정규화 대상 컬럼({normalize_columns})')
+
         ss[normalize_columns] = StandardScaler().fit_transform(ss[normalize_columns])
-        # 정규화 해당 대상 제외 코드
-        # except_column = ss.columns.difference(['timestamp', 'price', 'date'])
-        # ss[except_column] = StandardScaler().fit_transform(ss[except_column])
+        print('     정규화 수행 완료 ...')
         return ss if data is not None else setattr(self, 'data', ss)
 
     def tstodate(self, data=None):
@@ -78,15 +100,24 @@ class process(Route):
 class preprocessor(process, Route):
     def __init__(self):
         super().__init__()
-        #if not os.path.exists(self.RESULTPATH):
         print('데이터 세트 구성중....')
         self.defaultDataMerge()
+        print('데이터 세트를 저장합니다....')
         self.data.to_csv(self.RESULTPATH)
 
         # #특정 시점 이후부터 학습 ( 6월 초 부터 )
-        # self.data = self.data[self.data['timestamp'] >= 1717513200]
-        self.data = self.data[self.data['timestamp'] >= 1717426800]#3월 4일부터17174268001709478000
-        self.data = self.data[self.data['timestamp'] <= 1731200400]#11월 9일 10시까지 1731200400
+        start_ts = 1717426800
+        end_ts = 1731200400
+        korea_tz = pytz.timezone('Asia/Seoul')
+        start_date = datetime.fromtimestamp(start_ts, korea_tz)
+        end_date = datetime.fromtimestamp(end_ts, korea_tz)
+
+        # 결과 출력
+        print('   데이터의 시작 지점 : ' , start_date.strftime('%Y-%m-%d %H:%M:%S'))
+        print('   데이터의 종료 지점 : ' , end_date.strftime('%Y-%m-%d %H:%M:%S'))
+
+        self.data = self.data[self.data['timestamp'] >= start_ts]#3월 4일부터17174268001709478000
+        self.data = self.data[self.data['timestamp'] <= end_ts]#11월 9일 10시까지 1731200400
 
         self.data = self.data.reset_index(drop=True)
 
@@ -95,25 +126,6 @@ class preprocessor(process, Route):
             ['supplyPower','presentLoad','powerSolar','powerWind','supplyCapacity',
              'reserve_ratio', 'demand_renewable_ratio','demand_supply_diff',
              'reserve_to_demand_ratio']]
-
-
-
-        # else:
-        #     print('데이터 세트 추가중....')
-        #     self.data = pd.read_csv(self.RESULTPATH)
-        #     self.addApiData()
-        #     self.lagged_data()
-        #
-        #     self.data = self.data[self.data['timestamp'] >= 1717513200]
-        #     self.data =self.data.reset_index(drop=True)
-        #
-        #     self.transformer = PowerTransformer(method='yeo-johnson')
-        #     self.data['yj_price'] = self.transformer.fit_transform(self.data[['price']])
-        #     self.data['yj_price_lag1'] = self.data['yj_price'].shift(24)
-        #     self.y = self.data['yj_price']  # 종속 변수
-        #     self.x = self.data[
-        #         ['yj_price_lag1', 'currentDemand_lag1', 'supplyReserveCapacity_lag1', 'totalRenewableGeneration_lag1',
-        #          'supplyCapacity_lag1']]  # 독립 변수
 
 
     def addApiData(self):
